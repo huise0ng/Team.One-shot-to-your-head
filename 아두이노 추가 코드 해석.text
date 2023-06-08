@@ -1,0 +1,143 @@
+#include <Servo.h>                        // Servo 라이브러리를 포함시킵니다.
+#include <LiquidCrystal_I2C.h>             // LiquidCrystal_I2C 라이브러리를 포함시킵니다.
+#include <Wire.h>                          // Wire 라이브러리를 포함시킵니다.
+
+#define RST 0                              // RST 핀 번호를 0으로 정의합니다.
+#define COIN 1                             // COIN 핀 번호를 1로 정의합니다.
+#define BTN1 2                             // BTN1 핀 번호를 2로 정의합니다.
+#define BTN2 4                             // BTN2 핀 번호를 4로 정의합니다.
+#define BTN3 7                             // BTN3 핀 번호를 7로 정의합니다.
+#define BTN4 8                             // BTN4 핀 번호를 8로 정의합니다.
+#define BTN5 12                            // BTN5 핀 번호를 12로 정의합니다.
+#define BTN6 13                            // BTN6 핀 번호를 13로 정의합니다.
+
+#define SV1 3                              // SV1 핀 번호를 3으로 정의합니다.
+#define SV2 5                              // SV2 핀 번호를 5으로 정의합니다.
+#define SV3 6                              // SV3 핀 번호를 6으로 정의합니다.
+#define SV4 9                              // SV4 핀 번호를 9으로 정의합니다.
+#define SV5 10                             // SV5 핀 번호를 10으로 정의합니다.
+#define SV6 11                             // SV6 핀 번호를 11으로 정의합니다.
+
+Servo svoArray[6];                        // Servo 객체를 배열로 선언합니다. (6개의 서보 모터)
+LiquidCrystal_I2C lcd(0x27, 16, 2);        // LiquidCrystal_I2C 객체를 생성합니다. (주소: 0x27, 16x2 디스플레이)
+
+int dataArray[6] = {BTN1, BTN2, BTN3, BTN4, BTN5, BTN6};   // 버튼 핀 번호를 배열로 저장합니다.
+int scoreArray[6] = {100, 50, 30, 200, 90, 180};           // 각 버튼에 해당하는 점수를 배열로 저장합니다.
+int svoPinArray[6] = {SV1, SV2, SV3, SV4, SV5, SV6};       // 서보 모터 핀 번호를 배열로 저장합니다.
+int score = 0;                                            // 게임 점수 변수를 초기화합니다.
+
+void reset();                                              // reset() 함수를 선언합니다.
+void lcdprint(int scoreOrNum, int mode);                   // lcdprint() 함수를 선언합니다.
+void playGame();                                           // playGame() 함수를 선언합니다.
+
+void setup() {
+  Serial.begin(9600);                                      // 시리얼 통신을 초기화합니다.
+  Serial.println("Hello!");                                // "Hello!" 메시지를 시리얼 모니터에 출력합니다.
+  lcd.begin();                                             // LCD 디스플레이를 초기화합니다.
+  lcd.clear();                                             // LCD 디스플레이를 지웁니다.
+  lcd.setCursor(0, 0);                                     // LCD 커서를 (0, 0) 위치로 이동합니다.
+  lcd.print("Game Start!");                                // "Game Start!" 메시지를 LCD에 출력합니다.
+
+  pinMode(RST, INPUT_PULLUP);                              // RST 핀을 풀업 입력으로 설정합니다.
+  pinMode(COIN, INPUT_PULLUP);                             // COIN 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN1, INPUT_PULLUP);                             // BTN1 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN2, INPUT_PULLUP);                             // BTN2 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN3, INPUT_PULLUP);                             // BTN3 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN4, INPUT_PULLUP);                             // BTN4 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN5, INPUT_PULLUP);                             // BTN5 핀을 풀업 입력으로 설정합니다.
+  pinMode(BTN6, INPUT_PULLUP);                             // BTN6 핀을 풀업 입력으로 설정합니다.
+
+  for (int i = 0; i < 6; i++) {
+    svoArray[i].attach(svoPinArray[i]);                     // Servo 객체를 해당하는 핀에 연결합니다.
+  }
+  reset();                                                 // reset() 함수를 호출하여 초기화합니다.
+}
+
+void loop() {
+  Serial.println("Insert Coin!");                           // "Insert Coin!" 메시지를 시리얼 모니터에 출력합니다.
+  lcd.setCursor(0, 0);                                      // LCD 커서를 (0, 0) 위치로 이동합니다.
+  lcd.print("Insert Coin!    ");                            // "Insert Coin!" 메시지를 LCD에 출력합니다.
+  while (analogRead(A0) < 500) {                             // A0 핀으로부터 읽은 아날로그 값이 500보다 작을 때까지 대기합니다.
+    continue;                                               // 계속 진행합니다.
+  }
+  lcd.setCursor(0, 0);                                      // LCD 커서를 (0, 0) 위치로 이동합니다.
+  lcd.print("Press SRT Button");                             // "Press Start Button" 메시지를 LCD에 출력합니다.
+  Serial.println("Press Start Button");                      // "Press Start Button" 메시지를 시리얼 모니터에 출력합니다.
+  while (digitalRead(RST)) {                                 // RST 핀이 HIGH일 동안 대기합니다.
+    continue;                                               // 계속 진행합니다.
+  }
+  playGame();                                               // playGame() 함수를 호출하여 게임을 시작합니다.
+}
+
+void playGame() {
+  int centinal = 0;                                         // centinal 변수를 0으로 초기화합니다.
+  Serial.println("Game Start!");                            // "Game Start!" 메시지를 시리얼 모니터에 출력합니다.
+  lcd.setCursor(0, 0);                                      // LCD 커서를 (0, 0) 위치로 이동합니다.
+  lcd.print("Game Start!      ");                            // "Game Start!" 메시지를 LCD에 출력합니다.
+  delay(1000);                                              // 1초 동안 대기합니다.
+  while (true) {                                            // 무한 루프입니다.
+    centinal = 0;                                           // centinal 변수를 0으로 초기화합니다.
+    int standback;                                          // standback 변수를 선언합니다.
+    lcdprint(score, 1);                                     // lcdprint() 함수를 호출하여 현재 점수를 출력합니다.
+    while (!centinal) {                                     // centinal이 0일 동안 반복합니다.
+      if (!digitalRead(RST)) {                              // RST 핀이 LOW인 경우,
+        reset();                                            // reset() 함수를 호출하여 초기화합니다.
+        return;                                             // playGame() 함수를 종료합니다.
+      }
+      for (int i = 0; i < 6; i++) {                          // 6개의 버튼에 대해서 반복합니다.
+        if (!digitalRead(dataArray[i])) {                    // 해당 버튼이 눌렸을 경우,
+          standback = i;                                     // standback 변수에 버튼의 인덱스 값을 저장합니다.
+          centinal = 1;                                      // centinal을 1로 설정하여 반복을 종료합니다.
+          score += scoreArray[i];                            // 점수를 누적합니다.
+          break;                                             // 반복을 종료합니다.
+        }
+      }
+      if (centinal) {                                        // centinal이 1인 경우,
+        break;                                               // 반복을 종료합니다.
+      }
+    }
+
+    for (int i = 0; i < 6; i++) {                            // 6개의 버튼에 대해서 반복합니다.
+      Serial.print(!digitalRead(dataArray[i]));              // 해당 버튼의 상태(눌렸으면 0, 아니면 1)를 시리얼 모니터에 출력합니다.
+      Serial.print("  ");                                    // 공백을 출력합니다.
+    }
+    Serial.println();                                        // 새 줄로 이동합니다.
+    lcdprint(scoreArray[standback], 0);                      // lcdprint() 함수를 호출하여 해당 버튼에 해당하는 점수를 출력합니다.
+    delay(1000);                                             // 1초 동안 대기합니다.
+    svoArray[standback].write(3);                            // 해당 버튼에 해당하는 서보 모터를 각도 3으로 회전시킵니다.
+    delay(1000);                                             // 1초 동안 대기합니다.
+    svoArray[standback].write(130);                          // 해당 버튼에 해당하는 서보 모터를 각도 130으로 회전시킵니다.
+  }
+}
+
+void reset() {
+  score = 0;                                                // 점수를 0으로 초기화합니다.
+  Serial.println("\nRestart!");                              // "Restart!" 메시지를 시리얼 모니터에 출력합니다.
+  lcd.setCursor(0, 0);                                      // LCD 커서를 (0, 0) 위치로 이동합니다.
+  lcd.print("Restart!        ");                             // "Restart!" 메시지를 LCD에 출력합니다.
+  for (int i = 0; i < 6; i++) {                              // 6개의 서보 모터에 대해서 반복합니다.
+    svoArray[i].write(3);                                   // 서보 모터를 각도 3으로 회전시킵니다.
+  }
+  delay(1000);                                              // 1초 동안 대기합니다.
+  for (int i = 0; i < 6; i++) {                              // 6개의 서보 모터에 대해서 반복합니다.
+    svoArray[i].write(130);                                 // 서보 모터를 각도 130으로 회전시킵니다.
+  }
+  lcdprint(score, 1);                                       // lcdprint() 함수를 호출하여 현재 점수를 출력합니다.
+}
+
+void lcdprint(int scoreOrNum, int mode) {
+  lcd.setCursor(0, 0);                                      // LCD 커서를 (0, 0) 위치로 이동합니다.
+  if (mode) {                                               // mode가 1인 경우,
+    lcd.print("Score : ");                                  // "Score : " 메시지를 LCD에 출력합니다.
+    lcd.print(scoreOrNum);                                  // 점수를 LCD에 출력합니다.
+    Serial.print("Score : ");                               // "Score : " 메시지를 시리얼 모니터에 출력합니다.
+    Serial.println(scoreOrNum);                             // 점수를 시리얼 모니터에 출력합니다.
+    Serial.println();                                       // 새 줄로 이동합니다.
+  } else {                                                  // mode가 0인 경우,
+    lcd.print("You Hit : ");                                // "You Hit : " 메시지를 LCD에 출력합니다.
+    lcd.print(scoreOrNum);                                  // 해당 버튼에 해당하는 점수를 LCD에 출력합니다.
+    Serial.print("You Hit : ");                             // "You Hit : " 메시지를 시리얼 모니터에 출력합니다.
+    Serial.println(scoreOrNum);                             // 해당 버튼에 해당하는 점수를 시리얼 모니터에 출력합니다.
+  }
+  lcd.print("           ");                                  // 빈 칸을 출력하여 이전 출력 내용을 지웁니다.
+}
