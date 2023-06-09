@@ -74,7 +74,7 @@ void checkPushButton() {
 
 void endGame() {
   for (int i = 0; i < 6; i++) {
-    servos[i].write(90);  // 게임 종료 시 모든 서보 모터를 90도로 회전
+    servos[i].write(70);  // 게임 종료 시 모든 서보 모터를 70도로 회전
     servos[i].detach();  // 서보 모터 제어 신호 해제
   }
   lcd.clear();  // LCD 화면 지우기
